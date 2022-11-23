@@ -7,8 +7,8 @@ import numpy as np
 from intersect import Intersect
 import matMath as mt
 
-WHITE = (1, 1, 1)
-BLACK = (0, 0, 0)
+white = (1, 1, 1)
+black = (0, 0, 0)
 
 OPAQUE = 0
 REFLECTIVE = 1
@@ -25,22 +25,14 @@ class Sphere(object):
         L = mt.subtractVectors(this.center, origin)
         tca = mt.dotMatrix(L, direction)
         d = (mt.normL2(L) ** 2 - tca ** 2) ** 0.5
-
+        
+        # Convertir d a reales
         if isinstance(d, complex):
             d = d.real
 
-        try:
-            if d > this.radius:
-                return None
-        except:
-            print(mt.normL2(L))
-            print(f'L: {L}')
-            print(f'TCA: {tca}')
-            print(f'd: {d}')
-            print(f'this.radius: {this.radius}')
-
         thc = (this.radius ** 2 - d ** 2) ** 0.5
-
+        
+        # Convertir thc a reales
         if isinstance(thc, complex):
             thc = thc.real
 
