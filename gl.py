@@ -114,12 +114,12 @@ class Raytracer(object):
             for y in range(this.viewportY, this.viewportY + this.viewportHeight):
                 this.glPoint(x, y, color)
 
-    def scene_intersect(this, orig, dir, sceneObj):
+    def scene_intersect(this, orig, direction, sceneObj):
         depth = float('inf')
         intersect = None
 
         for obj in this.scene:
-            hit = obj.ray_intersect(orig, dir)
+            hit = obj.ray_intersect(orig, direction)
             if hit != None:
                 if sceneObj != hit.sceneObj:
                     if hit.distance < depth:
@@ -128,12 +128,12 @@ class Raytracer(object):
 
         return intersect
 
-    def cast_ray(this, orig, dir, sceneObj=None, recursion=0):
-        intersect = this.scene_intersect(orig, dir, sceneObj)
+    def cast_ray(this, orig, direction, sceneObj=None, recursion=0):
+        intersect = this.scene_intersect(orig, direction, sceneObj)
 
         if intersect == None or recursion >= MAX_REC_DEPTH:
             if this.envMap:
-                return this.envMap.getEnvColor(dir)
+                return this.envMap.getEnvColor(direction)
             else:
                 return (this.clearColor[0] / 255,
                         this.clearColor[1] / 255,
@@ -157,7 +157,8 @@ class Raytracer(object):
                 finalColor = mt.addVectors(finalColor, lightColor)
 
         elif material.matType == REFLECTIVE:
-            reflect = reflectVector(intersect.normal, [x * -1 for x in dir])
+            reflect = reflectVector(
+                intersect.normal, [d * -1 for d in direction])
             reflectColor = this.cast_ray(
                 intersect.point, reflect, intersect.sceneObj, recursion + 1)
             reflectColor = reflectColor
@@ -170,7 +171,7 @@ class Raytracer(object):
             finalColor = mt.addVectors(reflectColor, specColor)
 
         elif material.matType == TRANSPARENT:
-            outside = mt.dotMatrix(dir, intersect.normal) < 0
+            outside = mt.dotMatrix(direction, intersect.normal) < 0
             bias = [x * 0.001 for x in intersect.normal]
 
             specColor = [0, 0, 0]
@@ -178,18 +179,20 @@ class Raytracer(object):
                 specColor = mt.addVectors(
                     specColor, light.getSpecColor(intersect, this))
 
-            reflect = reflectVector(intersect.normal, [x * -1 for x in dir])
+            reflect = reflectVector(
+                intersect.normal, [d * -1 for d in direction])
             reflectOrig = mt.addVectors(
                 intersect.point, bias) if outside else mt.subtractVectors(intersect.point, bias)
             reflectColor = this.cast_ray(
                 reflectOrig, reflect, None, recursion + 1)
             reflectColor = reflectColor
 
-            kr = fresnel(intersect.normal, dir, material.ior)
+            kr = fresnel(intersect.normal, direction, material.ior)
 
             refractColor = [0, 0, 0]
             if kr < 1:
-                refract = refractVector(intersect.normal, dir, material.ior)
+                refract = refractVector(
+                    intersect.normal, direction, material.ior)
                 refractOrig = mt.subtractVectors(
                     intersect.point, bias) if outside else mt.addVectors(intersect.point, bias)
                 refractColor = this.cast_ray(
@@ -197,7 +200,7 @@ class Raytracer(object):
                 refractColor = refractColor
 
             finalColor = mt.addVectors(
-                [x * float(kr) for x in reflectColor], [x * (1 - kr) for x in refractColor])
+                [refC * float(kr) for refC in reflectColor], [rfK * (1 - kr) for rfK in refractColor])
             finalColor = mt.addVectors(finalColor, specColor)
 
         finalColor = mt.multVectors(finalColor, objectColor)
@@ -221,24 +224,23 @@ class Raytracer(object):
 
         for y in range(this.viewportY, this.viewportY + this.viewportHeight + 1, STEPS):
             for x in range(this.viewportX, this.viewportX + this.viewportWidth + 1, STEPS):
-                # Pasar de coordenadas de ventana a
-                # coordenadas NDC (-1 a 1)
+                # Pasar de coordenadas de ventana a coordenadas NDC
                 Px = ((x + 0.5 - this.viewportX) / this.viewportWidth) * 2 - 1
                 Py = ((y + 0.5 - this.viewportY) / this.viewportHeight) * 2 - 1
                 Px *= r
                 Py *= t
 
-                direction = V3(Px, Py, -this.nearPlane)
-                direction = [d / mt.normL2(direction) for d in direction]
+                directionection = V3(Px, Py, -this.nearPlane)
+                directionection = [
+                    d / mt.normL2(directionection) for d in directionection]
 
-                rayColor = this.cast_ray(this.camPosition, direction)
+                rayColor = this.cast_ray(this.camPosition, directionection)
 
                 if rayColor is not None:
                     rayColor = _color_(rayColor[0], rayColor[1], rayColor[2])
                     this.glPoint(x, y, rayColor)
 
     # Crea un archivo BMP
-
     def write(this, filename):
         with open(filename, "bw") as file:
             # pixel header
